@@ -286,7 +286,7 @@ F_tall$measure.2 = (100-F_tall$measure)
 condition_barplot = ggplot(F_tall, aes(condition, measure.2, fill = q.type.cat)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
 condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   stat_summary(fun.data=mean_cl_boot, geom = "errorbar", position = position_dodge(width=0.90), width = 0.2) + # add errors bars
-   # facet_wrap(~q.type.cat, scales = "free") + # create as many separate graphs as there are conditions 
+  facet_wrap(~q.type.cat, scales="free") + # create as many separate graphs as there are conditions 
   ylab("ratings (scale: 0-100)") + # change the label of the y-axis
   # PERCEPTUAL SIGNIFICANCE LINES
   geom_signif(comparisons = list(c("GBGR-P", "GBRG-P")), annotations=c("p < .0001"), y_position = 46.5, tip_length = 0.00375) +
@@ -367,6 +367,8 @@ library(rcompanion)
 chi.data = matrix(c(18,15,23,9,23,40),2)
 dimnames(chi.data) = list(c("Perceptual", "Causal"), c("Markov", "Independence", "Other"))
 
+# Percep: M=18, I=22, T=5, A=0, O=20
+# Causal: M=15, I=9, T=0, A=2, O=38
 
 # check structure of data
 str(chi.data)
