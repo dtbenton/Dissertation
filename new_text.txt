@@ -1,0 +1,14 @@
+ Volume in drive C is WINDOWS
+ Volume Serial Number is 4ABF-CD39
+
+ Directory of C:\Users\detbe\OneDrive\Desktop\Grand Folder\Carnegie_Mellon_University\dissertation
+
+03/31/2018  09:56 PM    <DIR>          .
+03/31/2018  09:56 PM    <DIR>          ..
+03/30/2018  02:25 PM    <DIR>          Experiment 1
+03/30/2018  02:25 PM    <DIR>          Experiment 2
+03/31/2018  09:56 PM                 0 new_text.txt
+03/30/2018  02:25 PM             1,692 README.md
+03/30/2018  02:25 PM             2,074 simulation_power_analysis_script.R
+               3 File(s)          3,766 bytes
+               4 Dir(s)  594,690,072,576 bytes free
