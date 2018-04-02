@@ -32,17 +32,22 @@ D_tall = reshape(D, varying = 3:10, v.names = "measure", timevar = "condition", 
 # order data
 D_tall = D_tall[order(D_tall$ID),]
 
+
 # add q.type.cat column
-D_tall$q.type.cat = as.factor(rep(c(1:2), each = 4, times = 64))
+D_tall$q.type.cat = as.factor(rep(c(0:1), each = 4, times = 64))
 
 # remove redundant 'condition' column
 D_tall[,8] = NULL
 
-# set appropriate factor variables
+# set appropriate factor variables in "wide" data
+D$group = as.factor(D$group)
+D$q.type = as.factor(D$q.type)
+
+
+# set appropriate factor variables in "tall" data
 D_tall$condition = as.factor(D_tall$condition)
 D_tall$group = as.factor(D_tall$group)
 D_tall$q.type = as.factor(D_tall$q.type)
-D_tall$q.type.cat = as.factor(D_tall$q.type.cat)
 D_tall$measure.2 = (100-D_tall$measure)
 
 
@@ -109,11 +114,17 @@ leveneTest(D_tall$measure[D_tall$condition==c(5:8)], as.factor(D_tall$condition[
 lme.fit.prelim = lme(measure~q.type+group+q.type:group, random=~1|ID, data=D_tall)
 anova.lme(lme.fit.prelim)
 
+
+
 ## PRELIMINARY ANALYSIS NOTES
 # no effect of question type (perceptual first vs causal first) or location (red first or blue 
 # first in training sequence)
 
 
+anova.lme(lme(measure~condition,
+              random=~1|ID, data=D_tall))
+
+q.type.cat:condition, q.type.cat:group, group:condition
 
 #######################
 #### MAIN ANALYSIS ####
@@ -122,7 +133,7 @@ anova.lme(lme.fit.prelim)
 sub.percep = subset(D_tall, ! condition %in% c(5:8))
 lme.fit.main.percep = lme(measure.2~as.factor(condition), random=~1|ID, data = sub.percep)
 anova.lme(lme.fit.main.percep)
-
+ N
 
 
 # causal question
@@ -132,9 +143,10 @@ anova.lme(lme.fit.main.causal)
 
 
 # omnibus analysis
-lme.fit.main.omnibus = lme(measure.2~as.factor(condition)+as.factor(q.type)+as.factor(condition):as.factor(q.type), 
+lme.fit.main.omnibus = lme(measure.2~as.factor(condition)+as.factor(q.type)+as.factor(group)+as.factor(condition):as.factor(q.type), 
                            random=~1|ID, data=D_tall)
 anova.lme(lme.fit.main.omnibus)
+
 
 
 ###################################
@@ -367,7 +379,7 @@ library(rcompanion)
 chi.data = matrix(c(18,15,23,9,23,40),2)
 dimnames(chi.data) = list(c("Perceptual", "Causal"), c("Markov", "Independence", "Other"))
 
-# Percep: M=18, I=22, T=5, A=0, O=20
+# Percep: M=18, I=23, T=4, A=0, O=19
 # Causal: M=15, I=9, T=0, A=2, O=38
 
 # check structure of data
