@@ -17,6 +17,7 @@ library(ggplot2)
 library(ez)
 library(plyr)
 library(ggsignif)
+library(rcompanion)
 options(scipen=9999)
 
 # load data
@@ -34,7 +35,7 @@ D_tall = D_tall[order(D_tall$ID),]
 
 
 # add q.type.cat column
-D_tall$q.type.cat = as.factor(rep(c(0:1), each = 4, times = 64))
+D_tall$q.type.cat = as.factor(rep(c(1:2), each = 4, times = 64))
 
 # remove redundant 'condition' column
 D_tall[,8] = NULL
@@ -43,11 +44,11 @@ D_tall[,8] = NULL
 D$group = as.factor(D$group)
 D$q.type = as.factor(D$q.type)
 
-
 # set appropriate factor variables in "tall" data
 D_tall$condition = as.factor(D_tall$condition)
 D_tall$group = as.factor(D_tall$group)
 D_tall$q.type = as.factor(D_tall$q.type)
+D_tall$q.type.cat = as.factor(D_tall$q.type.cat)
 D_tall$measure.2 = (100-D_tall$measure)
 
 
@@ -114,17 +115,10 @@ leveneTest(D_tall$measure[D_tall$condition==c(5:8)], as.factor(D_tall$condition[
 lme.fit.prelim = lme(measure~q.type+group+q.type:group, random=~1|ID, data=D_tall)
 anova.lme(lme.fit.prelim)
 
-
-
 ## PRELIMINARY ANALYSIS NOTES
 # no effect of question type (perceptual first vs causal first) or location (red first or blue 
 # first in training sequence)
 
-
-anova.lme(lme(measure~condition,
-              random=~1|ID, data=D_tall))
-
-q.type.cat:condition, q.type.cat:group, group:condition
 
 #######################
 #### MAIN ANALYSIS ####
@@ -133,7 +127,6 @@ q.type.cat:condition, q.type.cat:group, group:condition
 sub.percep = subset(D_tall, ! condition %in% c(5:8))
 lme.fit.main.percep = lme(measure.2~as.factor(condition), random=~1|ID, data = sub.percep)
 anova.lme(lme.fit.main.percep)
- N
 
 
 # causal question
@@ -298,7 +291,7 @@ F_tall$measure.2 = (100-F_tall$measure)
 condition_barplot = ggplot(F_tall, aes(condition, measure.2, fill = q.type.cat)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
 condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   stat_summary(fun.data=mean_cl_boot, geom = "errorbar", position = position_dodge(width=0.90), width = 0.2) + # add errors bars
-  facet_wrap(~q.type.cat, scales="free") + # create as many separate graphs as there are conditions 
+  #facet_wrap(~q.type.cat, scales="free") + # create as many separate graphs as there are conditions 
   ylab("ratings (scale: 0-100)") + # change the label of the y-axis
   # PERCEPTUAL SIGNIFICANCE LINES
   geom_signif(comparisons = list(c("GBGR-P", "GBRG-P")), annotations=c("p < .0001"), y_position = 46.5, tip_length = 0.00375) +
@@ -326,10 +319,27 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
   
   
 
-
 #########################################
 #### INDIVIDUAL DIFFERENCES ANALYSIS ####
 #########################################
+# INDIVIDUAL DIFFERENCE PLOTS FOR BOTH THE PERCEPTUAL AND CAUSAL QUESTIONS
+condition_barplot = ggplot(F_tall, aes(condition, measure.2, fill = q.type.cat)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+  facet_wrap(~ID) + # create as many separate graphs as there are conditions 
+  ylab("ratings (scale: 0-100)") + # change the label of the y-axis
+  theme_bw() + # remove the gray background
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
+  scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
+  coord_cartesian(ylim=c(0, 80)) +
+  scale_fill_manual(values=c("#000000", "#999999")) +
+  theme(strip.background =element_rect(fill='black')) +
+  theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
+  theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
+  theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
+  theme(legend.text = element_text(size = 12)) + 
+  theme(legend.title=element_blank()) +
+  labs(x = "Test trials")
 
 # INDIVIDUAL DIFFERENCE PLOTS FOR PERCEPTUAL QUESTION
 condition_barplot = ggplot(sub.percep, aes(condition, measure.2, fill = q.type.cat)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
@@ -372,50 +382,52 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
 
 ## CHI SQUARE TEST ON INDIVIDUAL DIFFERENCES ##
 # install and load post-hoc chi-square test package (called follow up binomial tests)
-install.packages("rcompanion")
-library(rcompanion)
+
 
 # create contigency table with counts
-chi.data = matrix(c(18,15,23,9,23,40),2)
-dimnames(chi.data) = list(c("Perceptual", "Causal"), c("Markov", "Independence", "Other"))
+chi.data = matrix(c(18,15,23,10,4,3,12,9,7,25,0,2),2)
+dimnames(chi.data) = list(c("Perceptual", "Causal"), c("Markov", "Independence", "Temporal",
+                                                       "Other","Familiar","Inconsistent"))
+## COUNTS
+# Percep: M=18, I=23, T=4, O=12, F=7, AI=0, A = 
+# Causal: M=15, I=10, T=3, O=9, F=25, AI=2, A =
 
-# Percep: M=18, I=23, T=4, A=0, O=19
-# Causal: M=15, I=9, T=0, A=2, O=38
+
+  # LEGEND: 
+            # M = Markov; I = Independence; 
+            # T = Temporal Precedence; O = Other; 
+            # F = ALL Familiar, AI = All Inconsistent
+            # A = Associative (sum of all associative options)
 
 # check structure of data
 str(chi.data)
 
 
 # run chisq.test() on chi table
-chi.test = chisq.test(chi.data)
+chi.test = chisq.test(chi.data, simulate.p.value = TRUE) # used 'simulate.p.value' 
+                                                         # because some cell counts are small
 
 ## run post-hoc tests (where you average over columns) ##
-for(i in 1:3) print(chisq.test(chi.data[,i])) # this gives you all column-wise comparisons 
+for(i in 1:6) print(chisq.test(chi.data[,i])) # this gives you all column-wise comparisons 
                                               # (i.e., M v. I, M v. O, I v. O)
 
 # the chi data
-             Markov Independence Other
-Perceptual     18           23    23
-Causal         15            9    40
+             Markov Independence Temporal Other Familiar Inconsistent
+Perceptual     18           23        4    12        7            0
+Causal         15           10        3     9       25            2
 
 
 
-## run post-hoc tests (where you test two particular cell means) ##
+## run post-hoc tests (where you test two particular cell means): binomial tests ##
 # perceptual question
-fisher.test(matrix(c(18, 41-18, 23, 41-23), ncol=2)) # compare, within Perceptual, proportion of 
-                                                     # Markov choices to Independence choices
-
-fisher.test(matrix(c(18, 41-18, 23, 41-23), ncol=2)) # compare, within Perceptual, proportion of 
-                                                     # Markov choices to Other choices
-
-fisher.test(matrix(c(23, 46-23, 23, 46-23), ncol=2)) # compare, within Perceptual, proportion of 
-                                                     # Independence choices to Other choices
 
 
-# causal question
-fisher.test(matrix(c(15, 24-15, 9, 24-9), ncol=2)) # compare, within Perceptual, proportion of 
-                                                     # Markov choices to Independence choices
+## PERCEPTUAL CONDITION POST-HOC TESTS: ##
+# M v I
+binom.test(23, 41, .5, alternative = "two.sided")
 
+## CAUSAL CONDITION POST-HOC TESTS: ##
+binom.test(15, 25, .5, alternative = "two.sided")
 
 
 
