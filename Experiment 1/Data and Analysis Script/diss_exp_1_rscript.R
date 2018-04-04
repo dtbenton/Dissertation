@@ -385,12 +385,13 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
 
 
 # create contigency table with counts
-chi.data = matrix(c(18,15,23,10,4,3,12,9,7,25,0,2),2)
+chi.data = matrix(c(18,15,23,10,4,3,12,9,7,25,0,2,34,55),2)
 dimnames(chi.data) = list(c("Perceptual", "Causal"), c("Markov", "Independence", "Temporal",
-                                                       "Other","Familiar","Inconsistent"))
+                                                       "Other","All Familiar","All Inconsistent",
+                                                       "All Associative"))
 ## COUNTS
-# Percep: M=18, I=23, T=4, O=12, F=7, AI=0, A = 
-# Causal: M=15, I=10, T=3, O=9, F=25, AI=2, A =
+# Percep: M=18, I=23, T=4, O=12, F=7, AI=0, A = 34
+# Causal: M=15, I=10, T=3, O=9, F=25, AI=2, A = 55
 
 
   # LEGEND: 
@@ -412,9 +413,9 @@ for(i in 1:6) print(chisq.test(chi.data[,i])) # this gives you all column-wise c
                                               # (i.e., M v. I, M v. O, I v. O)
 
 # the chi data
-             Markov Independence Temporal Other Familiar Inconsistent
-Perceptual     18           23        4    12        7            0
-Causal         15           10        3     9       25            2
+              Markov Independence Temporal Other All Familiar All Inconsistent All Associative
+Perceptual     18           23        4    12            7                0              34
+Causal         15           10        3     9           25                2              55
 
 
 
@@ -425,6 +426,15 @@ Causal         15           10        3     9       25            2
 ## PERCEPTUAL CONDITION POST-HOC TESTS: ##
 # M v I
 binom.test(23, 41, .5, alternative = "two.sided")
+
+# I v T
+binom.test(23, 27, .5, alternative = "two.sided")
+
+# I v 0
+binom.test(23, 23+12, .5, alternative = "two.sided")
+
+# F v IC
+binom.test(7, 7, .5, alternative = "two.sided")
 
 ## CAUSAL CONDITION POST-HOC TESTS: ##
 binom.test(15, 25, .5, alternative = "two.sided")
