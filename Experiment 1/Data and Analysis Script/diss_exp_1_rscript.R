@@ -488,12 +488,8 @@ binom_func(15,55)
 
 
 
-
-
-
-
-
-
+# Collapsing over question type
+binom_func(15,55)
 
 
 
