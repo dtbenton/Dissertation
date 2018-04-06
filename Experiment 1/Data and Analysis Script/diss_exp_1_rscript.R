@@ -422,22 +422,69 @@ Causal         15           10        3     9           25                2     
 ## run post-hoc tests (where you test two particular cell means): binomial tests ##
 # perceptual question
 
-
+# Define a function to run post-hoc binomial tests
+binom_func = function(x,y){
+  bin_test = binom.test(x, x+y, p = 0.5, alternative = "two.sided")
+  return(bin_test$p.value)
+}
+                  ##
 ## PERCEPTUAL CONDITION POST-HOC TESTS: ##
+                  ##
+
+# Independence comparisons
 # M v I
-binom.test(23, 41, .5, alternative = "two.sided")
+binom_func(18,23)
 
 # I v T
-binom.test(23, 27, .5, alternative = "two.sided")
+binom_func(23,4)
 
-# I v 0
-binom.test(23, 23+12, .5, alternative = "two.sided")
+# I v O
+binom_fun(18,12)
 
-# F v IC
-binom.test(7, 7, .5, alternative = "two.sided")
+# I v F
+binom_func(23,7)
 
+
+# Markov comparisons
+# M v T
+binom_func(18,4)
+# M v O
+binom_func(18,12)
+# M v IC
+binom_func(18,0)
+# M v AA
+binom_func(18,34)
+
+                  ##
 ## CAUSAL CONDITION POST-HOC TESTS: ##
-binom.test(15, 25, .5, alternative = "two.sided")
+                  ##
+
+# Independence comparisons
+# M v I
+binom_func(15,10)
+# I v T
+binom_func(10,3)
+
+# I v O
+binom_func(10,9)
+
+# I v F
+binom_func(10,25)
+
+
+
+# Markov comparisons
+# M v T
+binom_func(15,3)
+
+# M v O
+binom_func(15,9)
+
+# M v IC
+binom_func(15,2)
+
+# M v AA
+binom_func(15,55)
 
 
 
