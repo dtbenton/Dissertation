@@ -16,8 +16,9 @@ library(reshape2)
 library(ggplot2)
 library(ez)
 library(plyr)
+library(ggsignif)
+library(rcompanion)
 options(scipen=9999)
-
 
 
 #### Experiment 2 Code Below ####
