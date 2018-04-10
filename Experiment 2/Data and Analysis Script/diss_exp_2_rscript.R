@@ -20,5 +20,17 @@ library(ggsignif)
 library(rcompanion)
 options(scipen=9999)
 
+# load data
+D = read.csv(file.choose(), header = TRUE)
+D = as.data.frame(D[1:64,])
 
-#### Experiment 2 Code Below ####
+# reorder columns
+D = as.data.frame(D[,c(1,2,3,7,5,9,4,8,6,10,11,12)])
+
+# reshape the data
+D_tall = reshape(D, varying = 3:10, v.names = "measure", 
+                 timevar = "condition", idvar = "ID", 
+                 new.row.names = 1:512, direction = "long")
+
+# order data
+D_tall = D_tall[order(D_tall$ID),]
