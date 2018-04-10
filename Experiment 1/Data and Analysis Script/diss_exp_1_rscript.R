@@ -434,13 +434,10 @@ binom_func = function(x,y){
 # Independence comparisons
 # M v I
 binom_func(18,23)
-
 # I v T
 binom_func(23,4)
-
 # I v O
 binom_fun(18,12)
-
 # I v F
 binom_func(23,7)
 
@@ -464,10 +461,8 @@ binom_func(18,34)
 binom_func(15,10)
 # I v T
 binom_func(10,3)
-
 # I v O
 binom_func(10,9)
-
 # I v F
 binom_func(10,25)
 
@@ -476,13 +471,10 @@ binom_func(10,25)
 # Markov comparisons
 # M v T
 binom_func(15,3)
-
 # M v O
 binom_func(15,9)
-
 # M v IC
 binom_func(15,2)
-
 # M v AA
 binom_func(15,55)
 
@@ -495,23 +487,3 @@ binom_func(15,55)
 
 
 
-
-
-
-
-
-## simple bar graphs
-# perceptual condition
-perceptual.bars = c((100-mean(D_tall$measure[D_tall$condition==1])), 
-                    (100-mean(D_tall$measure[D_tall$condition==2])), 
-                    (100-mean(D_tall$measure[D_tall$condition==3])), 
-                    (100-mean(D_tall$measure[D_tall$condition==4]))) 
-x = barplot(perceptual.bars, names.arg = c("GBGR", "GRGB", "GBRG", "GRBG"), density = rep(10,4), ylim = c(0,50), main = "Exp 1 - Perceptual Ratings", 
-            ylab = "Perceptual Ratings")
-
-perceptual.bars = c((100-mean(D_tall$measure[D_tall$condition==5])), 
-                    (100-mean(D_tall$measure[D_tall$condition==6])), 
-                    (100-mean(D_tall$measure[D_tall$condition==7])), 
-                    (100-mean(D_tall$measure[D_tall$condition==8]))) 
-x = barplot(perceptual.bars, names.arg = c("GBGR", "GRGB", "GBRG", "GRBG"), density = rep(10,4), ylim = c(0,50), main = "Exp 1 - Perceptual Ratings", 
-            ylab = "Perceptual Ratings")
