@@ -473,8 +473,10 @@ binom_func(10,25)
 binom_func(15,3)
 # M v O
 binom_func(15,9)
+
 # M v IC
 binom_func(15,2)
+
 # M v AA
 binom_func(15,55)
 
