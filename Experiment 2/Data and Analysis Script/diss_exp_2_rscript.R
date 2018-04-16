@@ -396,29 +396,115 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
 
 
 # create contigency table with counts
-chi.data = matrix(c(18,15,23,10,4,3,12,9,7,25,0,2,34,55),2)
-dimnames(chi.data) = list(c("Perceptual", "Causal"), c("Markov", "Independence", "Temporal",
-                                                       "Other","All Familiar","All Inconsistent",
-                                                       "All Associative"))
+chi.data = matrix(c(0,1,0,1,2,1,47,48,2,2,0,1,13,11,51,53),2)
+dimnames(chi.data) = list(c("Perceptual", "Causal"), c("Markov", "Independence", "faux-Independence",
+                                                       "Spatial Gap","All Familiar","All Inconsistent",
+                                                       "Other","All Associative"))
 ## COUNTS
-# Percep: M=0, I=0, SG=47, F=, AI=, O =, A = 
-# Causal: M=, I=, SG=, F=, AI=, O=, A = 
+# Percep: M=0, I=0, fI=6, SG=47, AF=2, AI=0, O=9, AA=55
+# Causal: M=1, I=1, fI=5, SG=48, AF=2, AI=1, O=7, AA=57
+
+# the chi data 
+              Markov Independence faux-Independence Spatial Gap All Familiar All Inconsistent Other All Associative
+Perceptual      0            0                 2          47            2                0    13              51
+Causal          1            1                 1          48            2                1    11              53
 
 
-# LEGEND: 
+
+# run chisq.test() on chi table
+chi.test = chisq.test(chi.data, simulate.p.value = TRUE) 
+
+
+## run post-hoc tests (where you test two particular cell means): binomial tests ##
+# perceptual question
+
+# Define a function to run post-hoc binomial tests
+binom_func = function(x,y){
+  bin_test = binom.test(x, x+y, p = 0.5, alternative = "two.sided")
+  return(bin_test$p.value)
+}
+
+
+                  ##
+## PERCEPTUAL CONDITION POST-HOC TESTS: ##
+                  ##
+  
+# Independence comparisons
+# M v f-I
+binom_func(0,2)
+# I v f-I
+binom_func(0,2)
+# I v T
+binom_func(23,4)
+# I v O
+binom_fun(18,12)
+# I v F
+binom_func(23,7)
+  
+  
+# Markov comparisons
+# M v T
+binom_func(18,4)
+# M v O
+binom_func(18,12)
+# M v IC
+binom_func(18,0)
+# M v AA
+binom_func(18,34)  
+  
+  
+  
+  
+  
+  
+                      ##
+## PERCEPTUAL CONDITION POST-HOC TESTS: ##
+                      ##
+
+# Independence comparisons
+# M v I
+binom_func(18,23)
+# I v T
+binom_func(23,4)
+# I v O
+binom_fun(18,12)
+# I v F
+binom_func(23,7)
+
+
+# Markov comparisons
+# M v T
+binom_func(18,4)
+# M v O
+binom_func(18,12)
+# M v IC
+binom_func(18,0)
+# M v AA
+binom_func(18,34)   
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  # LEGEND: 
 # M = Markov; I = Independence; 
+# faux-Independence;
 # SG = Spatial Gap; 
-# F = ALL Familiar, AI = All Inconsistent
-# A = Associative (sum of all associative options)
+# AF = ALL Familiar, AI = All Inconsistent
+# AA = All Associative (sum of all associative options)
 
-
-
-independencec relation
-markov condition
-position
-spatial gap
-all familiar (because all are launching events)
-all novel (because at least one aspect different from train sequences in at least one aspect)
 
 
 # check structure of data
