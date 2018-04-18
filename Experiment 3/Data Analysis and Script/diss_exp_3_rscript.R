@@ -424,3 +424,42 @@ binom_func(1,3)
 # M v 0
 binom_func(2,9)
 0.06542969
+
+
+
+
+
+                      ##
+## CAUSAL CONDITION POST-HOC TESTS: ##
+                      ##
+# P v M
+binom_func(2,22)
+0.000035882
+
+# P v C
+binom_func(5,25)
+0.0003249142
+
+# P v L3N
+binom_func(1,21)
+0.00001096725
+
+# P v AF
+binom_func(0,21)
+0.0000009536743
+
+# P v O
+binom_func(4,24)
+0.0001799911
+
+# M v L3N
+binom_func(1,3)
+0.625
+
+# M v AF 
+binom_func(0,2)
+0.5
+
+# M v 0
+binom_func(2,6)
+0.2890625
