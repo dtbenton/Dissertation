@@ -348,13 +348,13 @@ chi.data = matrix(c(4,2,5,5,4,6,19,18,0,1),2)
 dimnames(chi.data) = list(c("Perceptual", "Causal"), c("Color", "Shape", 
                                                        "All Familiar", "Other", "All Novel"))
 ## COUNTS
-# Percep: C=4, S=5, AF=4, O=19, AN=0
-# Causal: C=2, S=5, AF=6, O=18, AN=1
+# Percep: C=4, S=5, AF=4, O=6,  L3N=13
+# Causal: C=2, S=5, AF=6, O=7, L3N=12
 
 # the chi data
-              Color Shape All Familiar Other All Novel
-Perceptual     4     5            4    19         0
-Causal         2     5            6    18         1
+              Color Shape All Familiar Other     L3N
+Perceptual     4     5            4    6         13
+Causal         2     5            6    7         12
 
 
 # run chisq.test() on chi table
@@ -375,7 +375,7 @@ binom_func = function(x,y){
 ## PERCEPTUAL CONDITION POST-HOC TESTS: ##
                     ##
 # c v. s
-binom_func(4,9)
+binom_func(6,19)
 
 # c v. af
 binom_func(4,8)
