@@ -42,6 +42,9 @@ for(i in 1:25){
 # reorder columns
 D = as.data.frame(D[,c(1:6,22,7:23)])
 
+# delete redundant med.split.age column
+D$med.split.age.1 = NULL
+
 # convert data from "wide" format to "tall" format
 D_tall = reshape(D, varying = c(17:20), v.names = "measure", 
                  timevar = "test.trial.level", idvar = "ID", 
@@ -370,7 +373,7 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
   labs(x = "Test trials")
 
 ###################################################################
-## CHI SQUARE TEST ON INDIVIDUAL DIFFERENCES FOR YOUNGER INFANTS ##
+## CHI SQUARE TEST ON INDIVIDUAL DIFFERENCES FOR OLDER INFANTS ##
 ###################################################################
 # install and load post-hoc chi-square test package (called follow up binomial tests)
 
@@ -378,7 +381,7 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
 chi.older.data = matrix(c(4,3,5),1)
 dimnames(chi.older.data) = list(c("Younger Infant"), c("Markov", "Perceptual", "Other"))
 ## COUNTS
-# Younger: M=4, P=3,  O = 5
+# Older: M=4, P=3,  O = 5
 
 
 # the chi data
@@ -397,9 +400,9 @@ chi.older.test = chisq.test(chi.older.data, simulate.p.value = TRUE)
 
 
 
-###################################################################
-                    ## HABITUATION RATE ANALYSIS ##
-###################################################################
+##########################################################
+## INDIVIDUAL DIFFERENCES FOR FAST AND SLOW HABITUATORS ##
+##########################################################
 ancova.main.hab.rate.fit = ezANOVA(D_tall, dv = measure, within=test.trial.level,
                                    between = med.split.num.hab,
                                    wid = ID)
@@ -410,8 +413,15 @@ print(ancova.main.hab.rate.fit)
 L = D_tall
 L = L[order(L$med.split.num.hab),]
 
-slow_habituators_df = L[c(1:52),]
-fast_habituators_df = L[c(53:100),]
+# rename levels of 'condition' and 'q.type.cat' factors
+L$med.split.num.hab = revalue(x = as.factor(L$med.split.num.hab), 
+                              c("0" = "Fast Habituators (<=5)", "1" = "Slow Habituators (>5)"))
+
+fast_habituators_df = L[c(1:52),]
+slow_habituators_df = L[c(53:100),]
+
+
+
  
 # OMNIBUS HABITUATORS GRAPH
 condition_barplot = ggplot(L, aes(med.split.num.hab, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
@@ -423,7 +433,7 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
-  coord_cartesian(ylim=c(0, 15)) +
+  coord_cartesian(ylim=c(0, 18)) +
   theme_classic() +
   labs(x = "Test trials") 
 
@@ -445,3 +455,75 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
   theme(legend.text = element_text(size = 12)) + 
   theme(legend.title=element_blank()) +
   labs(x = "Test trials")
+
+
+
+# FAST HABITUATORS
+condition_barplot = ggplot(fast_habituators_df, aes(test.trial.level, measure, fill = med.split.num.hab)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+  facet_wrap(~ID) + # create as many separate graphs as there are conditions 
+  ylab("Looking Time (s)") + # change the label of the y-axis
+  theme_bw() + # remove the gray background
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
+  scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
+  coord_cartesian(ylim=c(0, 80)) +
+  scale_fill_manual(values=c("#000000", "#999999")) +
+  theme(strip.background =element_rect(fill='black')) +
+  theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
+  theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
+  theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
+  theme(legend.text = element_text(size = 12)) + 
+  theme(legend.title=element_blank()) +
+  labs(x = "Test trials")
+
+
+####################################################################
+## CHI SQUARE TEST ON INDIVIDUAL DIFFERENCES FOR SLOW HABITUATORS ##
+####################################################################
+# install and load post-hoc chi-square test package (called follow up binomial tests)
+
+# create contigency table with counts
+chi.slow.data = matrix(c(5,2,5),1)
+dimnames(chi.slow.data) = list(c("Slow Habituators"), c("Markov", "Perceptual", "Other"))
+## COUNTS
+# Older: M=5, P=2,  O = 5
+
+
+# the chi data
+                    Markov Perceptual Other
+Slow Habituators      5          2     6
+
+# run chisq.test() on chi table
+chi.slow.test = chisq.test(chi.slow.data, simulate.p.value = TRUE) 
+
+# SLOW HABITUATORS INDIVIDUAL DIFFERENCES SUMMARY
+# Older infants, like younger infants, did not differ in the extent to which they 
+# were classified as Markov processors, Perceptual processors, 
+# Other processors.
+
+
+
+####################################################################
+## CHI SQUARE TEST ON INDIVIDUAL DIFFERENCES FOR FAST HABITUATORS ##
+####################################################################
+# install and load post-hoc chi-square test package (called follow up binomial tests)
+
+# create contigency table with counts
+chi.fast.data = matrix(c(5,2,6),1)
+dimnames(chi.fast.data) = list(c("Fast Habituators"), c("Markov", "Perceptual", "Other"))
+## COUNTS
+# Older: M=5, P=2,  O = 6
+
+
+# the chi data
+Markov Perceptual Other
+Fast Habituators      5          2     6
+
+# run chisq.test() on chi table
+chi.fast.test = chisq.test(chi.fast.data, simulate.p.value = TRUE) 
+
+# FAST HABITUATORS INDIVIDUAL DIFFERENCES SUMMARY
+# Older infants, like younger infants, did not differ in the extent to which they 
+# were classified as Markov processors, Perceptual processors, 
+# Other processors.
