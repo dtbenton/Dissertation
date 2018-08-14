@@ -228,14 +228,10 @@ aov.ancova.homo.check = anova.lme(ancova.homo.check)
 # MAIN ANCOVA ANALYSIS #
 ########################
 ## age as a covariate ##
-ancova.fit = lme(measure~test.trial.level+age, random=~1|ID, data=D_tall)
-aov.ancova.fit = anova.lme(ancova.fit)
-
 ancova.main.fit = ezANOVA(D_tall, dv = measure, within=test.trial.level,
                          wid = ID,
                          between_covariates=age)
 print(ancova.main.fit)
-
 
 
 ## age using a median split ##
@@ -245,7 +241,15 @@ ancova.med.split = ezANOVA(D_tall, dv = measure, within = test.trial.level,
 print(ancova.med.split)
 
 
-
+omega_sq <- function(aovm){
+  sum_stats <- summary(aovm)[[1]]
+  SSm <- sum_stats[["Sum Sq"]][1]
+  SSr <- sum_stats[["Sum Sq"]][2]
+  DFm <- sum_stats[["Df"]][1]
+  MSr <- sum_stats[["Mean Sq"]][2]
+  W2 <- (SSm-DFm*MSr)/(SSm+SSr+MSr)
+  return(W2)
+}
 
 
 ########################################################
