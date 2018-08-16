@@ -241,16 +241,6 @@ ancova.med.split = ezANOVA(D_tall, dv = measure, within = test.trial.level,
 print(ancova.med.split)
 
 
-omega_sq <- function(aovm){
-  sum_stats <- summary(aovm)[[1]]
-  SSm <- sum_stats[["Sum Sq"]][1]
-  SSr <- sum_stats[["Sum Sq"]][2]
-  DFm <- sum_stats[["Df"]][1]
-  MSr <- sum_stats[["Mean Sq"]][2]
-  W2 <- (SSm-DFm*MSr)/(SSm+SSr+MSr)
-  return(W2)
-}
-
 
 ########################################################
 ########################################################
@@ -305,6 +295,11 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
 ##########################################################
 ## INDIVIDUAL DIFFERENCES FOR OLDER AND YOUNGER INFANTS ##
 ##########################################################
+ancova.main.age.fit = ezANOVA(D_tall, dv = measure, within=test.trial.level,
+                                   between = med.split.age,
+                                   wid = ID)
+print(ancova.main.age.fit)
+
 # create separate DFs for both the younger and older infants
 Z = D_tall
 Z = Z[order(Z$med.split.age),]
