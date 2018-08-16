@@ -283,6 +283,95 @@ ancova.med.split = ezANOVA(D_tall, dv = measure, within = test.trial.level,
 print(ancova.med.split)
 
 
+# for() loop to get means of trials
+means_vec = rep(0,5)
+for(i in 1:length(means_vec)){
+  calc= mean(D_tall$measure[D_tall$test.trial.level==i])
+  means_vec[i] = calc
+}
+means_vec
+
+# means: 9.532  7.424  8.956  7.216 20.284
+
+
+# nest for() loop to get differences between means
+k=1
+comb_vec = rep(0,25)
+for(i in 1:5){
+  for(j in 1:5){
+    calc = (mean(D_tall$measure[D_tall$test.trial.level==i])-
+              mean(D_tall$measure[D_tall$test.trial.level==j]))
+    comb_vec[k] = calc
+    k = k+1
+  }
+}
+
+
+# DIFFERENCES BETWEEN PAIRS OF MEANS #
+[1]   0.000   2.108   0.576   2.316 -10.752  -2.108   0.000  -1.532   0.208 -12.860
+[11]  -0.576   1.532   0.000   1.740 -11.328  -2.316  -0.208  -1.740   0.000 -13.068
+[21]  10.752  12.860  11.328  13.068   0.000
+
+########################
+# Global Boot Function #
+########################
+# bootstrap global function
+boot_mean = as.data.frame(matrix(NA, nrow=5, ncol=3, byrow=TRUE))
+for(i in 1:nrow(boot_mean)){ # want number of iterations to equal number of rows, especially because we're filling in by row
+  set.seed(2018)
+  boot_func = function(data,b,formula, p){ 
+    d= data[b,] 
+    x = d$measure[d$test.trial.level==i]
+    dif.1 =  mean(x, data=D_tall) 
+    return(dif.1)
+  }
+  
+  boot_main = boot(D_tall, boot_func, R=5000) 
+  boot_mean[i,] = c(boot_main$t0, boot_main$t0  + 1.96*-sd(boot_main$t), 
+                    boot_main$t0  + 1.96*sd(boot_main$t))
+}
+
+######################
+  # BOOT TEST DF #
+######################
+V1        V2       V3
+1  9.532  6.516559 12.54744
+2  7.424  4.639529 10.20847
+3  8.956  5.476158 12.43584
+4  7.216  4.088433 10.34357
+5 20.284 16.173807 24.39419
+
+
+
+
+##############################################
+## FOLLOW UP PLANNED COMPARISONS PERM TESTS ##
+##############################################
+# GBGR v GRGB
+GBGRvGRGB = subset(D_tall, ! test.trial.level %in% c(3:5))
+GBGRvGRGB$test.trial.level = factor(GBGRvGRGB$test.trial.level)
+
+
+
+
+# permutation test for B+ mid vs post ratings
+b = rep(0,5000) 
+for(i in 1:5000){
+  y = sample(GBGRvGRGB$measure, replace=TRUE)
+  lm_1 = lme(y ~ test.trial.level, random=~1|ID, data=GBGRvGRGB) 
+  b[i] = fixed.effects(lm_1)[2]
+}
+
+hist(b)
+
+lm.fit = lme(measure~test.trial.level, random=~1|ID, data=GBGRvGRGB)
+beta_actual = fixed.effects(lm.fit)[2]
+
+# p value
+sum(abs(b) > beta_actual)/5000
+
+
+
 
 ########################################################
 ########################################################
