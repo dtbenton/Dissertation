@@ -46,7 +46,7 @@ D = as.data.frame(D[,c(1:6,22,7:23)])
 D$med.split.age.1 = NULL
 
 # convert data from "wide" format to "tall" format
-D_tall = reshape(D, varying = c(17:20), v.names = "measure", 
+D_tall = reshape(D, varying = c(17:20,22), v.names = "measure", 
                  timevar = "test.trial.level", idvar = "ID", 
                  direction = "long")
 
@@ -73,7 +73,6 @@ D_tall = as.data.frame(D_tall[,c(1:2,4:18,3,19)])
 ########################################################
 
 ## NORMALITY CHECKS
-
 par(mfrow=c(2,2)) 
 for (ii in 1:4)  hist(D_tall$measure[D_tall$group==ii], breaks=5)
 par(mfrow=c(1,1)) 
@@ -127,7 +126,6 @@ anova.lme(lme.fit.prelim)
 ########################
 # HABITUATION ANALYSIS #
 ########################
-
 # average number of trials to habituate
 mean(D_tall$num.hab)
 
@@ -204,6 +202,50 @@ ancova.num.hab = ezANOVA(D_tall, dv = num.hab, between = .(sex, group, test.stim
 print(ancova.num.hab)
 
 
+
+
+########################
+# PRETEST VS. POSTTEST #
+########################
+P_tall = reshape(D, varying = c(21:22), v.names = "measure", 
+                   timevar = "test.trial.level", idvar = "ID", 
+                   direction = "long")
+
+
+P_tall = P_tall[order(P_tall$ID),]
+
+
+# set appropriate factor variables in "tall" data
+P_tall$sex = as.factor(P_tall$sex)
+P_tall$group = as.factor(P_tall$group)
+P_tall$med.split.age = as.factor(P_tall$med.split.age)
+P_tall$hab.stim.order = as.factor(P_tall$hab.stim.order)
+P_tall$test.stim.order = as.factor(P_tall$test.stim.order)
+P_tall$test.trial.level = as.factor(P_tall$test.trial.level)
+
+
+prepost = ezANOVA(P_tall, dv = measure, between = .(sex, group, test.stim.order, 
+                                                    test.trial.level), 
+                         wid = ID,
+                         between_covariates=age)
+print(prepost) 
+
+
+## Follow up BF analysis to examine marginally reliable main effect of 'group type' ##
+# define the null and alternative models #
+lm.null = lme(measure~1, random=~1|ID, data=P_tall)
+lm.alt = lm(measure~as.factor(group), data=P_tall)
+
+#obtain BICs for the null and alternative models
+null.bic = BIC(lm.null)
+alt.bic = BIC(lm.alt)
+
+# compute the BF01  - this is the BF whose value is interpreted as the evidence in favor of the null (e.g., if the BF01 = 2.6, this means that there is 2.6 times as much evidence for the null than for the alternative or the evidence is 2.6:1 in favor of the null)
+
+BF01 = exp((alt.bic - null.bic)/2) # this yields a BF that is interpreted as the evidence in favor of the null; it's critical that the alt.bic comes first otherwise your interpretation of the resulting BF value will be incorrect
+BF10 = 1/BF01
+
+
 ############################
 # ANCOVA ASSUMPTION CHECKS #
 ############################
@@ -259,23 +301,25 @@ F_tall = D_tall
 # rename levels of 'condition' and 'q.type.cat' factors
 F_tall$test.trial.level = revalue(x = as.factor(F_tall$test.trial.level), 
                            c("1" = "GBGR", "2"="GRGB", "3" = "GBRG", 
-                             "4" = "GRBG"))
+                             "4" = "GRBG",
+                             "5" = "Posttest"))
 
 F_tall$med.split.age = revalue(x = as.factor(F_tall$med.split.age), 
                                   c("0" = "Younger (<=18.06)", "1" = "Older (>18.06)"))
 
 # OMNIBUS ANALYSIS FIGURE
-condition_barplot = ggplot(F_tall, aes(test.trial.level, measure)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+condition_barplot = ggplot(F_tall, aes(test.trial.level, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   stat_summary(fun.data=mean_cl_boot, geom = "errorbar", position = position_dodge(width=0.90), width = 0.2) + # add errors bars
-  #facet_wrap(~q.type.cat, scales="free") + # create as many separate graphs as there are conditions 
   ylab("Looking time (s)") + # change the label of the y-axis
   theme_bw() + # remove the gray background
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
-  coord_cartesian(ylim=c(0, 15)) +
+  coord_cartesian(ylim=c(0, 25)) +
   theme_classic() +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) + # changes colors of individual bars
+  theme(legend.position="none") + # hides legend but still exists in viewport
   labs(x = "Test trials") # change the main x-axis label
 
 
