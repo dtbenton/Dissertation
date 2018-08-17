@@ -265,10 +265,12 @@ aov.ancova.homo.check = anova.lme(ancova.homo.check)
 # the levels of the factor were not violated. 
 
 
-
+########################
 ########################
 # MAIN ANCOVA ANALYSIS #
 ########################
+########################
+
 ## age as a covariate ##
 ancova.main.fit = ezANOVA(D_tall, dv = measure, within=test.trial.level,
                          wid = ID,
@@ -347,28 +349,70 @@ V1        V2       V3
 ##############################################
 ## FOLLOW UP PLANNED COMPARISONS PERM TESTS ##
 ##############################################
-# GBGR v GRGB
-GBGRvGRGB = subset(D_tall, ! test.trial.level %in% c(3:5))
-GBGRvGRGB$test.trial.level = factor(GBGRvGRGB$test.trial.level)
-
-
-
-
-# permutation test for B+ mid vs post ratings
-b = rep(0,5000) 
-for(i in 1:5000){
-  y = sample(GBGRvGRGB$measure, replace=TRUE)
-  lm_1 = lme(y ~ test.trial.level, random=~1|ID, data=GBGRvGRGB) 
-  b[i] = fixed.effects(lm_1)[2]
+# GENERAL PERMUTATION FUNCTION
+main_perm_func = function(y){
+  df = subset(D_tall, ! test.trial.level %in% y)
+  df$test.trial.level = factor(GBGRVGRGB$test.trial.level)
+  b = rep(0,5000) 
+  for(i in 1:5000){
+    y = sample(df$measure, replace=TRUE)
+    lm_1 = lme(y ~ test.trial.level, random=~1|ID, data=df) 
+    b[i] = fixed.effects(lm_1)[2]
+  }
+  
+  lm.fit = lme(measure~test.trial.level, random=~1|ID, data=df)
+  beta_actual = fixed.effects(lm.fit)[2]
+  
+  # p value
+  c(sum(abs(b) > beta_actual)/5000, 
+    sum(abs(b) < beta_actual)/5000)
 }
 
-hist(b)
+################################
+# PERM TESTS: MAIN TEST EVENTS #
+################################
 
-lm.fit = lme(measure~test.trial.level, random=~1|ID, data=GBGRvGRGB)
-beta_actual = fixed.effects(lm.fit)[2]
+# GBGR V GRGB
+main_perm_func(c(3:5))
 
-# p value
-sum(abs(b) > beta_actual)/5000
+# GBGR V GBRG
+main_perm_func(c(2,4:5))
+
+# GBGR V GRBG
+main_perm_func(c(2:3,5))
+
+# GRGB V GBRG
+main_perm_func(c(1,4:5))
+
+# GRGB V GRBG
+main_perm_func(c(1,3,5))
+
+# GBRG V GRBG
+main_perm_func(c(1:2,5))
+
+
+###########################################################
+# PERM TESTS: POST TEST EVENT COMPARED TO ALL TEST EVENTS #
+###########################################################
+# POSTTEST V GBGR
+main_perm_func(c(2:4))
+
+# POSTTEST V GRGB
+main_perm_func(c(1,3:4))
+
+# POSTTEST V GBRG
+main_perm_func(c(1:2,4))
+
+# POSTTEST V GRBG
+main_perm_func(c(1:3))
+
+
+
+
+
+
+
+
 
 
 
@@ -434,15 +478,42 @@ ancova.main.age.fit = ezANOVA(D_tall, dv = measure, within=test.trial.level,
 print(ancova.main.age.fit)
 
 # create separate DFs for both the younger and older infants
-Z = D_tall
-Z = Z[order(Z$med.split.age),]
+U = subset(D_tall, ! test.trial.level %in% c(5))
+U = U[order(U$med.split.age),]
 
-younger_df = Z[c(1:52),]
-older_df = Z[c(53:100),]
+U$med.split.age = revalue(x = as.factor(U$med.split.age), 
+                               c("0" = "Younger (<=18.06)", "1" = "Older (>18.06)"))
+  
+U$test.trial.level = revalue(x = as.factor(U$test.trial.level), 
+                                  c("1" = "GBGR", "2"="GRGB", "3" = "GBRG", 
+                                    "4" = "GRBG"))
+
+younger_df = U[c(1:52),]
+older_df = U[c(53:100),]  
+
+
+# Omnibus Younger and Older Plot
+condition_barplot = ggplot(U, aes(med.split.age, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+  stat_summary(fun.data=mean_cl_boot, geom = "errorbar", position = position_dodge(width=0.90), width = 0.2) + # add errors bars
+  ylab("Looking time (s)") + # change the label of the y-axis
+  theme_bw() + # remove the gray background
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
+  scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
+  coord_cartesian(ylim=c(0, 18)) +
+  theme_classic() +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) + # changes colors of individual bars
+  theme(legend.box.background = element_rect(), legend.box.margin = margin(3, 3, 3, 3)) + # this creates a square around legends
+  theme(legend.text = element_text(size = 12)) + # this sets the size of the legend text 
+  theme(legend.title=element_blank()) + # this removes the automatic legend title
+  labs(x = "Test trials")
+
+
 
 # Younger Infants
-condition_barplot = ggplot(younger_df, aes(test.trial.level, measure, fill = med.split.age)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+condition_barplot = ggplot(younger_df, aes(test.trial.level, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   facet_wrap(~ID) + # create as many separate graphs as there are conditions 
   ylab("Looking Time (s)") + # change the label of the y-axis
   theme_bw() + # remove the gray background
@@ -450,19 +521,48 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
   coord_cartesian(ylim=c(0, 80)) +
-  scale_fill_manual(values=c("#000000", "#999999")) +
   theme(strip.background =element_rect(fill='black')) +
   theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
   theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
   theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
   theme(legend.text = element_text(size = 12)) + 
   theme(legend.title=element_blank()) +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
   labs(x = "Test trials")
+  
+
+# Older Infants
+condition_barplot = ggplot(older_df, aes(test.trial.level, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+  facet_wrap(~ID) + # create as many separate graphs as there are conditions 
+  ylab("Looking Time (s)") + # change the label of the y-axis
+  theme_bw() + # remove the gray background
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
+  scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
+  coord_cartesian(ylim=c(0, 80)) +
+  theme(strip.background =element_rect(fill='black')) +
+  theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
+  theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
+  theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
+  theme(legend.text = element_text(size = 12)) + 
+  theme(legend.title=element_blank()) +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+labs(x = "Test trials")
 
 
-## CHI SQUARE TEST ON INDIVIDUAL DIFFERENCES FOR YOUNGER INFANTS ##
+
+
+###################################################################
+## CHI SQUARE TEST ON INDIVIDUAL DIFFERENCES FOR OLDER INFANTS ##
+###################################################################
 # install and load post-hoc chi-square test package (called follow up binomial tests)
-
 
 # create contigency table with counts
 chi.younger.data = matrix(c(4,2,7),1)
@@ -484,25 +584,6 @@ chi.younger.test = chisq.test(chi.younger.data, simulate.p.value = TRUE)
 # Other processors.
 
 
-
-# Older Infants
-condition_barplot = ggplot(older_df, aes(test.trial.level, measure, fill = med.split.age)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
-  facet_wrap(~ID) + # create as many separate graphs as there are conditions 
-  ylab("Looking Time (s)") + # change the label of the y-axis
-  theme_bw() + # remove the gray background
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
-  scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
-  coord_cartesian(ylim=c(0, 80)) +
-  scale_fill_manual(values=c("#000000", "#999999")) +
-  theme(strip.background =element_rect(fill='black')) +
-  theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
-  theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
-  theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
-  theme(legend.text = element_text(size = 12)) + 
-  theme(legend.title=element_blank()) +
-  labs(x = "Test trials")
 
 ###################################################################
 ## CHI SQUARE TEST ON INDIVIDUAL DIFFERENCES FOR OLDER INFANTS ##
@@ -542,22 +623,28 @@ print(ancova.main.hab.rate.fit)
 
 
 # create separate DFs for both the younger and older infants
-L = D_tall
-L = L[order(L$med.split.num.hab),]
+G = subset(D_tall, ! test.trial.level %in% c(5))
+G = G[order(G$med.split.num.hab),]
 
-# rename levels of 'condition' and 'q.type.cat' factors
-L$med.split.num.hab = revalue(x = as.factor(L$med.split.num.hab), 
+G$med.split.age = revalue(x = as.factor(G$med.split.age), 
+                          c("0" = "Younger (<=18.06)", "1" = "Older (>18.06)"))
+
+G$test.trial.level = revalue(x = as.factor(G$test.trial.level), 
+                             c("1" = "GBGR", "2"="GRGB", "3" = "GBRG", 
+                               "4" = "GRBG"))
+
+G$med.split.num.hab = revalue(x = as.factor(G$med.split.num.hab), 
                               c("0" = "Fast Habituators (<=5)", "1" = "Slow Habituators (>5)"))
 
-fast_habituators_df = L[c(1:52),]
-slow_habituators_df = L[c(53:100),]
+fast_hab_df = G[c(1:52),]
+slow_hab_df = G[c(53:100),] 
 
 
 
  
 # OMNIBUS HABITUATORS GRAPH
-condition_barplot = ggplot(L, aes(med.split.num.hab, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+condition_barplot = ggplot(G, aes(med.split.num.hab, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   stat_summary(fun.data=mean_cl_boot, geom = "errorbar", position = position_dodge(width=0.90), width = 0.2) + # add errors bars
   #facet_wrap(~q.type.cat, scales="free") + # create as many separate graphs as there are conditions 
   ylab("Looking time (s)") + # change the label of the y-axis
@@ -567,11 +654,15 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
   coord_cartesian(ylim=c(0, 18)) +
   theme_classic() +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) + # changes colors of individual bars
+  theme(legend.box.background = element_rect(), legend.box.margin = margin(3, 3, 3, 3)) + # this creates a square around legends
+  theme(legend.text = element_text(size = 12)) + # this sets the size of the legend text 
+  theme(legend.title=element_blank()) + # this removes the automatic legend title
   labs(x = "Test trials") 
 
 # SLOW HABITUATORS
-condition_barplot = ggplot(slow_habituators_df, aes(test.trial.level, measure, fill = med.split.num.hab)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+condition_barplot = ggplot(slow_hab_df, aes(test.trial.level, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   facet_wrap(~ID) + # create as many separate graphs as there are conditions 
   ylab("Looking Time (s)") + # change the label of the y-axis
   theme_bw() + # remove the gray background
@@ -579,20 +670,23 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
   coord_cartesian(ylim=c(0, 80)) +
-  scale_fill_manual(values=c("#000000", "#999999")) +
   theme(strip.background =element_rect(fill='black')) +
   theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
   theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
   theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
   theme(legend.text = element_text(size = 12)) + 
   theme(legend.title=element_blank()) +
-  labs(x = "Test trials")
+  scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+labs(x = "Test trials")
 
 
 
 # FAST HABITUATORS
-condition_barplot = ggplot(fast_habituators_df, aes(test.trial.level, measure, fill = med.split.num.hab)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+condition_barplot = ggplot(fast_hab_df, aes(test.trial.level, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   facet_wrap(~ID) + # create as many separate graphs as there are conditions 
   ylab("Looking Time (s)") + # change the label of the y-axis
   theme_bw() + # remove the gray background
@@ -600,14 +694,17 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
   coord_cartesian(ylim=c(0, 80)) +
-  scale_fill_manual(values=c("#000000", "#999999")) +
   theme(strip.background =element_rect(fill='black')) +
   theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
   theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
   theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
   theme(legend.text = element_text(size = 12)) + 
   theme(legend.title=element_blank()) +
-  labs(x = "Test trials")
+  scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+labs(x = "Test trials")
 
 
 ####################################################################
@@ -616,15 +713,15 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
 # install and load post-hoc chi-square test package (called follow up binomial tests)
 
 # create contigency table with counts
-chi.slow.data = matrix(c(5,2,5),1)
+chi.slow.data = matrix(c(4,2,6),1)
 dimnames(chi.slow.data) = list(c("Slow Habituators"), c("Markov", "Perceptual", "Other"))
 ## COUNTS
-# Older: M=5, P=2,  O = 5
+# Older: M=4, P=2,  O = 6
 
 
 # the chi data
                     Markov Perceptual Other
-Slow Habituators      5          2     6
+Slow Habituators      4          2     6
 
 # run chisq.test() on chi table
 chi.slow.test = chisq.test(chi.slow.data, simulate.p.value = TRUE) 
