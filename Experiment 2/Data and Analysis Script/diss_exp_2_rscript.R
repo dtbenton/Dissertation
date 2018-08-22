@@ -295,30 +295,36 @@ F_tall$condition = revalue(x = as.factor(F_tall$condition),
 F_tall$q.type.cat = revalue(x = as.factor(F_tall$q.type.cat), 
                             c("1" = "Perceptual Question", "2"="Causal Question"))
 
+F_tall$condition.2 = rep(c(1:4), times = 128)
+F_tall$condition.2 = revalue(x = as.factor(F_tall$condition.2), 
+                           c("1" = "GBGR", "2"="GBgapGR", "3" = "GBRG", 
+                             "4" = "GBgapRG"))
+
+F_tall$q.type.cat.2 = rep(c(0,1), each = 4, times = 64)
+F_tall$q.type.cat.2 = revalue(x = as.factor(F_tall$q.type.cat.2), 
+                              c("0" = "Perceptual Question", "1"="Causal Question"))
+
 
 # OMNIBUS ANALYSIS FIGURE
-condition_barplot = ggplot(F_tall, aes(condition, measure.2, fill = q.type.cat)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+condition_barplot = ggplot(F_tall, aes(q.type.cat.2, measure.2, fill = condition.2)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   stat_summary(fun.data=mean_cl_boot, geom = "errorbar", position = position_dodge(width=0.90), width = 0.2) + # add errors bars
-  #facet_wrap(~q.type.cat, scales="free") + # create as many separate graphs as there are conditions 
   ylab("ratings (scale: 0-100)") + # change the label of the y-axis
-  # PERCEPTUAL SIGNIFICANCE LINES
-  geom_signif(comparisons = list(c("GBGR-P", "GBgapGR-P")), annotations=c("p < .0001"), y_position = 64, tip_length = 0.00375) +
-  geom_signif(comparisons = list(c("GBGR-P", "GBgapRG-P")), annotations=c("p < .0001"), y_position = 68, tip_length = 0.00375) +
-  geom_signif(comparisons = list(c("GBRG-P", "GBgapRG-P")), annotations=c("p < .0001"), y_position = 64, tip_length = 0.00375) +
-  geom_signif(comparisons = list(c("GBRG-P", "GBgapGR-P")), annotations=c("p < .0001"), y_position = 58, tip_length = 0.00375) +
-  # CAUSAL SIGNIFICANCE LINES
-  geom_signif(comparisons = list(c("GBGR-C", "GBgapGR-C")), annotations=c("p < .0001"), y_position = 64, tip_length = 0.00375) +
-  geom_signif(comparisons = list(c("GBGR-C", "GBgapRG-C")), annotations=c("p < .0001"), y_position = 68, tip_length = 0.00375) +
-  geom_signif(comparisons = list(c("GBRG-C", "GBgapRG-C")), annotations=c("p < .0001"), y_position = 64, tip_length = 0.00375) +
-  geom_signif(comparisons = list(c("GBRG-C", "GBgapGR-C")), annotations=c("p < .0001"), y_position = 58, tip_length = 0.00375) +
+  geom_signif(annotations = c("p < .0001","p < .0001","p < .0001","p < .0001"),
+              y_position = c(68,64,64,60), xmin=c(.6,1.125,.6,.9), 
+              xmax=c(1.35,1.35,.9,1.1), 
+              tip_length = 0.00375) +
+  geom_signif(annotations = c("p < .0001","p < .0001","p < .0001","p < .0001"),
+              y_position = c(68,64,64,60), xmin=c(2.275,2.275,1.875,1.875), 
+              xmax=c(1.6,2,1.6,2.075), 
+              tip_length = 0.00375) +
   theme_bw() + # remove the gray background
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
   coord_cartesian(ylim=c(0, 75)) +
   theme_classic() +
-  scale_fill_manual(values=c("#000000", "#999999")) +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "black")) +
   theme(strip.background =element_rect(fill='black')) +
   theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
   theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
@@ -331,8 +337,8 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
 #### INDIVIDUAL DIFFERENCES ANALYSIS ####
 #########################################
 # INDIVIDUAL DIFFERENCE PLOTS FOR BOTH THE PERCEPTUAL AND CAUSAL QUESTIONS
-condition_barplot = ggplot(F_tall, aes(condition, measure.2, fill = q.type.cat)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+condition_barplot = ggplot(F_tall, aes(q.type.cat.2, measure.2, fill = condition.2)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   facet_wrap(~ID) + # create as many separate graphs as there are conditions 
   ylab("ratings (scale: 0-100)") + # change the label of the y-axis
   theme_bw() + # remove the gray background
@@ -340,13 +346,16 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
   coord_cartesian(ylim=c(0, 80)) +
-  scale_fill_manual(values=c("#000000", "#999999")) +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "black")) +
   theme(strip.background =element_rect(fill='black')) +
   theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
   theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
   theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
   theme(legend.text = element_text(size = 12)) + 
   theme(legend.title=element_blank()) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
   labs(x = "Test trials")
 
 # INDIVIDUAL DIFFERENCE PLOTS FOR PERCEPTUAL QUESTION
