@@ -17,7 +17,6 @@ library(ggplot2)
 library(ez)
 library(plyr)
 library(ggsignif)
-library(rcompanion)
 options(scipen=9999)
 
 # load data
