@@ -21,7 +21,6 @@ options(scipen=9999)
 
 # load data
 D = read.csv(file.choose(), header = TRUE)
-D = as.data.frame(D[1:64,])
 
 # reorder columns
 D = as.data.frame(D[,c(1,2,3,9,5,7,4,10,6,8,11,12)])
@@ -35,13 +34,6 @@ D_tall = D_tall[order(D_tall$ID),]
 
 # add q.type.cat column
 D_tall$q.type.cat = as.factor(rep(c(1:2), each = 4, times = 64))
-
-# remove redundant 'condition' column
-D_tall[,8] = NULL
-
-# set appropriate factor variables in "wide" data
-D$group = as.factor(D$group)
-D$q.type = as.factor(D$q.type)
 
 # set appropriate factor variables in "tall" data
 D_tall$condition = as.factor(D_tall$condition)
@@ -278,14 +270,21 @@ F_tall$condition = revalue(x = as.factor(F_tall$condition),
                              "7" = "GBRG-C", "8" = "GRBG-C"))
 F_tall$q.type.cat = revalue(x = as.factor(F_tall$q.type.cat), 
                             c("1" = "Perceptual Question", "2"="Causal Question"))
+F_tall$condition.2 = rep(c(1:4), times = 128)
+F_tall$condition.2 = revalue(x = as.factor(F_tall$condition.2), 
+                             c("1" = "GBGR", "2"="GRGB", "3" = "GBRG", 
+                               "4" = "GRBG"))
+F_tall$q.type.cat.2 = rep(c(0,1), each = 4, times = 64)
+F_tall$q.type.cat.2 = revalue(x = as.factor(F_tall$q.type.cat.2), 
+                              c("0" = "Perceptual Question", "1"="Causal Question"))
+
 
 # create new measure column, 'measure.2', in which each value is subtracted from 100 to
 # obtain "inconsistency ratings"
 F_tall$measure.2 = (100-F_tall$measure)
 
 
-
-
+#################################### OLD OMNIBUS FIGURE ####################################################
 # OMNIBUS ANALYSIS FIGURE
 condition_barplot = ggplot(F_tall, aes(condition, measure.2, fill = q.type.cat)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
 condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
@@ -315,15 +314,46 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
   theme(legend.text = element_text(size = 12)) + 
   theme(legend.title=element_blank()) +
   labs(x = "Test trials") # change the main x-axis label
-  
-  
+############################################################################################################
+
+
+#################################### NEW OMNIBUS FIGURE ####################################################
+condition_barplot = ggplot(F_tall, aes(q.type.cat.2, measure.2, fill = condition.2)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+  stat_summary(fun.data=mean_cl_boot, geom = "errorbar", position = position_dodge(width=0.90), width = 0.2) + # add errors bars
+  ylab("ratings (scale: 0-100)") + # change the label of the y-axis
+  geom_signif(annotations = c("p < .0001","p < .0001","p < .0001","p < .0001"),
+              y_position = c(49,47,45,43), xmin=c(.6,.875,.6,.875), 
+              xmax=c(1.35,1.35,1.1,1.1), 
+              tip_length = 0.00375) +
+  geom_signif(annotations = c("p < .07","p < .05"),
+              y_position = c(34,32), xmin=c(2.275,2.1), 
+              xmax=c(1.875,1.875), 
+              tip_length = 0.00375) +
+  theme_bw() + # remove the gray background
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
+  scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
+  coord_cartesian(ylim=c(0, 51)) +
+  theme_classic() +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "black")) +
+  theme(strip.background =element_rect(fill='black')) +
+  theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
+  theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
+  theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
+  theme(legend.text = element_text(size = 12)) + 
+  theme(legend.title=element_blank()) +
+  labs(x = "Test trials")   
+############################################################################################################
+
+
 
 #########################################
 #### INDIVIDUAL DIFFERENCES ANALYSIS ####
 #########################################
 # INDIVIDUAL DIFFERENCE PLOTS FOR BOTH THE PERCEPTUAL AND CAUSAL QUESTIONS
-condition_barplot = ggplot(F_tall, aes(condition, measure.2, fill = q.type.cat)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
-condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
+condition_barplot = ggplot(F_tall, aes(q.type.cat.2, measure.2, fill = condition.2)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   facet_wrap(~ID) + # create as many separate graphs as there are conditions 
   ylab("ratings (scale: 0-100)") + # change the label of the y-axis
   theme_bw() + # remove the gray background
@@ -331,13 +361,16 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge")
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
   coord_cartesian(ylim=c(0, 80)) +
-  scale_fill_manual(values=c("#000000", "#999999")) +
+  scale_fill_manual(values = c("white", "gray81", "gray38", "black")) +
   theme(strip.background =element_rect(fill='black')) +
   theme(strip.text = element_text(colour = 'white', size = 12, face = "bold")) +
   theme(axis.title=element_text(size="12"),axis.text=element_text(size=12)) + 
   theme(legend.box.background = element_rect(), legend.box.margin = margin(6, 6, 6, 6)) +
   theme(legend.text = element_text(size = 12)) + 
   theme(legend.title=element_blank()) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
   labs(x = "Test trials")
 
 # INDIVIDUAL DIFFERENCE PLOTS FOR PERCEPTUAL QUESTION
