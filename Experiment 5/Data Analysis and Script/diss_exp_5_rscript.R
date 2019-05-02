@@ -25,45 +25,70 @@ D = read.csv(file.choose(), header = TRUE)
 
 
 # add median split age column
-D$med.split.age = rep(0,25)
-for(i in 1:25){
-  compute = ifelse(D$age[i]<=18.06,0,1)
+D$med.split.age = rep(0,length(D$age))
+for(i in 1:length(D$age)){
+  compute = ifelse(D$age[i]<=19.02,0,1)
   D$med.split.age[i] = compute
 }
 
   
 # add median split for num.hab
-D$med.split.num.hab = rep(0, 25)
-for(i in 1:25){
+D$med.split.num.hab = rep(0, length(D$num.hab))
+for(i in 1:length(D$num.hab)){
   calc = ifelse(D$num.hab[i]<=5,0,1)
   D$med.split.num.hab[i] = calc
 }
   
+# remove unneeded columns
+D$Partic..= NULL
+names(D)
+
 # reorder columns
-D = as.data.frame(D[,c(1:6,22,7:23)])
+D = as.data.frame(D[,c(1,2,6,22,3,4,
+                       5,7,23,8,9:21)])
+names(D)
 
 # delete redundant med.split.age column
 D$med.split.age.1 = NULL
 
 # convert data from "wide" format to "tall" format
-D_tall = reshape(D, varying = c(17:20,22), v.names = "measure", 
+D_tall = reshape(D, varying = c(18:23), v.names = "measure", 
                  timevar = "test.trial.level", idvar = "ID", 
                  direction = "long")
 
 
 D_tall = D_tall[order(D_tall$ID),]
 
-# set appropriate factor variables in "tall" data
-D_tall$sex = as.factor(D_tall$sex)
-D_tall$group = as.factor(D_tall$group)
-D_tall$med.split.age = as.factor(D_tall$med.split.age)
-D_tall$hab.stim.order = as.factor(D_tall$hab.stim.order)
-D_tall$test.stim.order = as.factor(D_tall$test.stim.order)
-D_tall$test.trial.level = as.factor(D_tall$test.trial.level)
 
-# reorder columns of D_tall
-D_tall = as.data.frame(D_tall[,c(1:2,4:18,3,19)])
 
+# FACTORIZE 'SEX'
+D_tall$sex = revalue(x = as.factor(D_tall$sex), 
+                     c("0" = "F", "1"="M"))
+
+# FACTORIZE 'TEST.STIM.ORDER'
+D_tall$test.stim.order = revalue(x = as.factor(D_tall$test.stim.order),
+                                 c("0" = "1234", "1" = "2413"))
+
+
+# FACTORIZE 'MED.SPLIT.NUM.HAB'
+D_tall$med.split.num.hab = revalue(x = as.factor(D_tall$med.split.num.hab),
+                                 c("0" = "Fast Habituators", "1" = "Slow Habituators"))
+
+
+# FACTORIZE 'GROUP'
+D_tall$group = revalue(x = as.factor(D_tall$group),
+                                   c("0" = "Red", "1" = "Blue"))
+
+# FACTORIZE 'HAB.STIM.ORDER'
+D_tall$hab.stim.order = revalue(x = as.factor(D_tall$hab.stim.order), 
+                                 c("0" = "12", "1"="21", "2"="34", "3"="43"))
+
+
+# FACTORIZE 'TEST.TRIAL.LEVEL'
+D_tall$test.trial.level = revalue(x = as.factor(D_tall$test.trial.level), 
+                                c("1" = "gbgr", "2"="grgb", 
+                                  "3"="gbrg", "4"="grbg",
+                                  "5"="Pretest", "6"="Posttest"))
 
 
 ########################################################
@@ -78,8 +103,8 @@ for (ii in 1:4)  hist(D_tall$measure[D_tall$group==ii], breaks=5)
 par(mfrow=c(1,1)) 
 
 # formal test of normality
-shapiro.ps = rep(0,4)
-for(i in 1:4) {
+shapiro.ps = rep(0,2)
+for(i in c("Red","Blue")) {
   shap.calc = shapiro.test(D_tall$measure[D_tall$group==i])
   shapiro.ps[i] = shap.calc$p.value
 }
@@ -91,16 +116,16 @@ for(i in 1:4) {
 # homoskedasticity check for "red" group
 boxplot(D_tall$measure[D_tall$test.stim.order==0]~D_tall$group[D_tall$group==c(1:4) & D_tall$test.stim.order==0])
 
-#homoskedasticity check for "blue" group
-boxplot(D_tall$measure[D_tall$test.stim.order==1]~D_tall$group[D_tall$group==c(1:4) & D_tall$test.stim.order==1])
-
+#homoskedasticity check for the "red" and "blue" groups
+boxplot(D_tall$measure[D_tall$group=="Red"]~D_tall$test.trial.level[D_tall$group=="Red"])
+boxplot(D_tall$measure[D_tall$group=="Blue"]~D_tall$test.trial.level[D_tall$group=="Blue"])
 
 # formal test of equal variance for both the 'red' and 'blue' groups
 # red group
-leveneTest(D_tall$measure[D_tall$group==0]~as.factor(D_tall$test.trial.level[D_tall$group==0]))
+leveneTest(D_tall$measure[D_tall$group=="Red"]~as.factor(D_tall$test.trial.level[D_tall$group=="Red"]))
 
 # blue group
-leveneTest(D_tall$measure[D_tall$group==1]~as.factor(D_tall$test.trial.level[D_tall$group==1]))
+leveneTest(D_tall$measure[D_tall$group=="Blue"]~as.factor(D_tall$test.trial.level[D_tall$group=="Blue"]))
 
 
 
@@ -114,9 +139,9 @@ leveneTest(D_tall$measure[D_tall$group==1]~as.factor(D_tall$test.trial.level[D_t
 ##############################
 #### PRELIMINARY ANALYSIS ####
 ##############################
-# analysis to determine whether there is an effect of sex
-lme.fit.prelim = lme(measure~sex+test.stim.order+sex:test.stim.order, 
-                     random=~1|ID, data=D_tall)
+# analysis to determine whether there is an effect of sex, test trial order, or group on 
+# looking time (in s)
+lme.fit.prelim = lme(measure~(test.trial.level+group+test.stim.order)^3,random=~1|ID, na.action=na.exclude, data=D_tall)
 
 lme.fit.prelim = lme(measure~sex+test.stim.order+group+sex:test.stim.order:group, 
                      random=~1|ID, data=D_tall)
