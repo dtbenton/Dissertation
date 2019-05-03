@@ -48,14 +48,11 @@ D = as.data.frame(D[,c(1,2,6,22,3,4,
                        5,7,23,8,9:21)])
 names(D)
 
-# delete redundant med.split.age column
-D$med.split.age.1 = NULL
 
 # convert data from "wide" format to "tall" format
-D_tall = reshape(D, varying = c(18:23), v.names = "measure", 
+D_tall = reshape(D, varying = c(18:21,23), v.names = "measure", 
                  timevar = "test.trial.level", idvar = "ID", 
                  direction = "long")
-
 
 D_tall = D_tall[order(D_tall$ID),]
 
@@ -88,7 +85,7 @@ D_tall$hab.stim.order = revalue(x = as.factor(D_tall$hab.stim.order),
 D_tall$test.trial.level = revalue(x = as.factor(D_tall$test.trial.level), 
                                 c("1" = "gbgr", "2"="grgb", 
                                   "3"="gbrg", "4"="grbg",
-                                  "5"="Pretest", "6"="Posttest"))
+                                  "5"="Posttest"))
 
 
 ########################################################
@@ -141,7 +138,8 @@ leveneTest(D_tall$measure[D_tall$group=="Blue"]~as.factor(D_tall$test.trial.leve
 ##############################
 # analysis to determine whether there is an effect of sex, test trial order, or group on 
 # looking time (in s)
-lme.fit.prelim = lme(measure~(test.trial.level+group+test.stim.order)^3,random=~1|ID, na.action=na.exclude, data=D_tall)
+lme.fit.prelim = lme(measure~(test.trial.level+group+test.stim.order)^3,random=~1|ID, 
+                     na.action=na.exclude, data=D_tall)
 
 lme.fit.prelim = lme(measure~sex+test.stim.order+group+sex:test.stim.order:group, 
                      random=~1|ID, data=D_tall)
@@ -151,8 +149,15 @@ anova.lme(lme.fit.prelim)
 ########################
 # HABITUATION ANALYSIS #
 ########################
+# average and range age
+mean(D_tall$age)
+range(D_tall$age)
+
 # average number of trials to habituate
 mean(D_tall$num.hab)
+
+# num of males
+sum(D$sex)
 
 
 # average seconds to habituate
@@ -169,7 +174,7 @@ num.hab.mean = function(data,b,formula){
 
 dif.num.hab = boot(D_tall, num.hab.mean, R=5000) 
 dif.num.hab
-dif.num.hab.mean = 6.24  + 1.96*c(-0.2196325, 0.2196325)
+dif.num.hab.mean = 6.28125  + 1.96*c(-0.1883883, 0.1883883)
 
 # bootstrapped to obtain CI for mean(D_tall$ttl.hab)
 set.seed(2018)
@@ -181,7 +186,7 @@ ttl.hab.mean = function(data,b,formula){
 
 dif.ttl.hab = boot(D_tall, ttl.hab.mean, R=5000) 
 dif.ttl.hab
-dif.ttl.hab.mean = 81.352  + 1.96*c(-4.471716, 4.471716)
+dif.ttl.hab.mean = 84.22813  + 1.96*c(-3.848969, 3.848969)
 
 
 
@@ -232,7 +237,7 @@ print(ancova.num.hab)
 ########################
 # PRETEST VS. POSTTEST #
 ########################
-P_tall = reshape(D, varying = c(21:22), v.names = "measure", 
+P_tall = reshape(D, varying = c(22:23), v.names = "measure", 
                    timevar = "test.trial.level", idvar = "ID", 
                    direction = "long")
 
@@ -243,17 +248,27 @@ P_tall = P_tall[order(P_tall$ID),]
 # set appropriate factor variables in "tall" data
 P_tall$sex = as.factor(P_tall$sex)
 P_tall$group = as.factor(P_tall$group)
+P_tall$age = as.factor(P_tall$age)
 P_tall$med.split.age = as.factor(P_tall$med.split.age)
 P_tall$hab.stim.order = as.factor(P_tall$hab.stim.order)
 P_tall$test.stim.order = as.factor(P_tall$test.stim.order)
 P_tall$test.trial.level = as.factor(P_tall$test.trial.level)
 
+P_tall$hab.min.2 = NULL
+P_tall$hab.min.3 = NULL
 
-prepost = ezANOVA(P_tall, dv = measure, between = .(sex, group, test.stim.order, 
-                                                    test.trial.level), 
-                         wid = ID,
-                         between_covariates=age)
-print(prepost) 
+
+lme.fit.prepost = lme(measure~(test.trial.level+group+sex+test.stim.order+test.trial.level)^4,random=~1|ID, 
+                     na.action=na.exclude, data=P_tall)
+anova.lme(lme.fit.prepost)
+
+# pretest mean and SD
+mean(P_tall$measure[P_tall$test.trial.level=="1"])
+sd(P_tall$measure[P_tall$test.trial.level=="1"])
+
+# posttest mean and SD
+mean(P_tall$measure[P_tall$test.trial.level=="2"], na.rm = TRUE)
+sd(P_tall$measure[P_tall$test.trial.level=="2"], na.rm = TRUE)
 
 
 ## Follow up BF analysis to examine marginally reliable main effect of 'group type' ##
@@ -297,47 +312,49 @@ aov.ancova.homo.check = anova.lme(ancova.homo.check)
 ########################
 
 ## age as a covariate ##
-ancova.main.fit = ezANOVA(D_tall, dv = measure, within=test.trial.level,
-                         wid = ID,
-                         between_covariates=age)
-print(ancova.main.fit)
-
-
-## age using a median split ##
-ancova.med.split = ezANOVA(D_tall, dv = measure, within = test.trial.level,
-                          between = med.split.age,
-                          wid = ID)
-print(ancova.med.split)
+lme.fit.main = lme(measure~test.trial.level, 
+                     random=~1|ID, na.action=na.exclude,
+                   data=D_tall)
+anova.lme(lme.fit.main)
 
 
 # for() loop to get means of trials
 means_vec = rep(0,5)
-for(i in 1:length(means_vec)){
-  calc= mean(D_tall$measure[D_tall$test.trial.level==i])
+for(i in c("gbgr","grgb","gbrg","grbg",
+           "Posttest")){
+  calc = mean(D_tall$measure[D_tall$test.trial.level==i], 
+              na.rm=TRUE)
   means_vec[i] = calc
 }
 means_vec
 
-# means: 9.532  7.424  8.956  7.216 20.284
+
+# means: 10.865625  7.115625  10.078125  6.775000 19.333548
 
 
 # nest for() loop to get differences between means
+D_tall_2 = reshape(D, varying = c(18:21,23), v.names = "measure", 
+                 timevar = "test.trial.level", idvar = "ID", 
+                 direction = "long")
+
+
+D_tall_2 = D_tall_2[order(D_tall_2$ID),]
+
 k=1
-comb_vec = rep(0,25)
+comb_vec = rep(0,5)
 for(i in 1:5){
   for(j in 1:5){
-    calc = (mean(D_tall$measure[D_tall$test.trial.level==i])-
-              mean(D_tall$measure[D_tall$test.trial.level==j]))
+    calc = (mean(D_tall_2$measure[D_tall_2$test.trial.level==i],na.rm = TRUE)-
+              mean(D_tall_2$measure[D_tall_2$test.trial.level==j],na.rm = TRUE))
     comb_vec[k] = calc
     k = k+1
   }
 }
-
+comb_vec
 
 # DIFFERENCES BETWEEN PAIRS OF MEANS #
-[1]   0.000   2.108   0.576   2.316 -10.752  -2.108   0.000  -1.532   0.208 -12.860
-[11]  -0.576   1.532   0.000   1.740 -11.328  -2.316  -0.208  -1.740   0.000 -13.068
-[21]  10.752  12.860  11.328  13.068   0.000
+[1]   0.000000   3.750000   0.787500   4.090625  -8.467923  -3.750000   0.000000  -2.962500   0.340625 -12.217923  -0.787500   2.962500   0.000000   3.303125  -9.255423  -4.090625  -0.340625  -3.303125
+[19]   0.000000 -12.558548   8.467923  12.217923   9.255423  12.558548   0.000000
 
 ########################
 # Global Boot Function #
@@ -349,24 +366,25 @@ for(i in 1:nrow(boot_mean)){ # want number of iterations to equal number of rows
   boot_func = function(data,b,formula, p){ 
     d= data[b,] 
     x = d$measure[d$test.trial.level==i]
-    dif.1 =  mean(x, data=D_tall) 
+    dif.1 =  mean(x, data=D_tall_2, na.rm=TRUE) 
     return(dif.1)
   }
   
-  boot_main = boot(D_tall, boot_func, R=5000) 
+  boot_main = boot(D_tall_2, boot_func, R=5000) 
   boot_mean[i,] = c(boot_main$t0, boot_main$t0  + 1.96*-sd(boot_main$t), 
                     boot_main$t0  + 1.96*sd(boot_main$t))
 }
+boot_mean
 
 ######################
   # BOOT TEST DF #
 ######################
-V1        V2       V3
-1  9.532  6.516559 12.54744
-2  7.424  4.639529 10.20847
-3  8.956  5.476158 12.43584
-4  7.216  4.088433 10.34357
-5 20.284 16.173807 24.39419
+V1       V2        V3
+1 10.865625  7.498880 14.23237
+2  7.115625  4.872700  9.35855
+3 10.078125  6.806933 13.34932
+4  6.775000  3.976870  9.57313
+5 19.333548 15.567131 23.09997
 
 
 
@@ -375,45 +393,48 @@ V1        V2       V3
 ## FOLLOW UP PLANNED COMPARISONS PERM TESTS ##
 ##############################################
 # GENERAL PERMUTATION FUNCTION
-main_perm_func = function(y){
-  df = subset(D_tall, ! test.trial.level %in% y)
-  df$test.trial.level = factor(GBGRVGRGB$test.trial.level)
+main_perm_func = function(a,z){
   b = rep(0,5000) 
-  for(i in 1:5000){
-    y = sample(df$measure, replace=TRUE)
-    lm_1 = lme(y ~ test.trial.level, random=~1|ID, data=df) 
-    b[i] = fixed.effects(lm_1)[2]
+  for(i in 1:length(b)){
+    x = factor(D_tall$test.trial.level, levels=c(a,z)) 
+    y = sample(D_tall$measure, replace=TRUE) 
+    lm_1 = lm(y ~ x, data=D_tall)
+    b[i] = coef(lm_1)[2]
   }
-  
-  lm.fit = lme(measure~test.trial.level, random=~1|ID, data=df)
-  beta_actual = fixed.effects(lm.fit)[2]
-  
-  # p value
-  c(sum(abs(b) > beta_actual)/5000, 
-    sum(abs(b) < beta_actual)/5000)
+  bb_dif = mean(D_tall$measure[D_tall$test.trial.level==a], na.rm=TRUE)-
+    mean(D_tall$measure[D_tall$test.trial.level==z], na.rm=TRUE)
+  c((sum(abs(b) > bb_dif)/length(b)),(sum(b > bb_dif)/length(b)),
+    sum((abs(b) < bb_dif)/length(b)),(sum(b < bb_dif)/length(b)),
+    mean(D_tall$measure[D_tall$test.trial.level==a]),
+    mean(D_tall$measure[D_tall$test.trial.level==z]),
+    bb_dif)
 }
 
 ################################
 # PERM TESTS: MAIN TEST EVENTS #
 ################################
+# levels of D_tall$test.trial
+levels(D_tall$test.trial)
+[1] "gbgr"     "grgb"     "gbrg"     "grbg"     "Posttest"
 
+# 
 # GBGR V GRGB
-main_perm_func(c(3:5))
+main_perm_func("gbgr","grgb")
 
 # GBGR V GBRG
-main_perm_func(c(2,4:5))
+main_perm_func("gbgr","gbrg")
 
 # GBGR V GRBG
-main_perm_func(c(2:3,5))
+main_perm_func("gbgr","grbg")
 
 # GRGB V GBRG
-main_perm_func(c(1,4:5))
+main_perm_func("grgb","gbrg")
 
 # GRGB V GRBG
-main_perm_func(c(1,3,5))
+main_perm_func("grgb","grbg")
 
 # GBRG V GRBG
-main_perm_func(c(1:2,5))
+main_perm_func("gbrg","grbg")
 
 
 ###########################################################
@@ -430,15 +451,6 @@ main_perm_func(c(1:2,4))
 
 # POSTTEST V GRBG
 main_perm_func(c(1:3))
-
-
-
-
-
-
-
-
-
 
 
 
