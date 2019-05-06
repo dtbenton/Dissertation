@@ -405,8 +405,8 @@ main_perm_func = function(a,z){
     mean(D_tall$measure[D_tall$test.trial.level==z], na.rm=TRUE)
   c((sum(abs(b) > bb_dif)/length(b)),(sum(b > bb_dif)/length(b)),
     sum((abs(b) < bb_dif)/length(b)),(sum(b < bb_dif)/length(b)),
-    mean(D_tall$measure[D_tall$test.trial.level==a]),
-    mean(D_tall$measure[D_tall$test.trial.level==z]),
+    mean(D_tall$measure[D_tall$test.trial.level==a], na.rm=TRUE),
+    mean(D_tall$measure[D_tall$test.trial.level==z], na.rm=TRUE),
     bb_dif)
 }
 
@@ -441,18 +441,59 @@ main_perm_func("gbrg","grbg")
 # PERM TESTS: POST TEST EVENT COMPARED TO ALL TEST EVENTS #
 ###########################################################
 # POSTTEST V GBGR
-main_perm_func(c(2:4))
+main_perm_func("Posttest","gbgr")
 
 # POSTTEST V GRGB
-main_perm_func(c(1,3:4))
+main_perm_func("Posttest","grgb")
 
 # POSTTEST V GBRG
-main_perm_func(c(1:2,4))
+main_perm_func("Posttest","gbrg")
 
 # POSTTEST V GRBG
-main_perm_func(c(1:3))
+main_perm_func("Posttest","grbg")
 
 
+##################################################################
+# BAYES FACTOR (FUNCTION) FOR MARGIANLLY SIGNIFICANT DIFFERENCES #
+##################################################################
+bayes_factor_func = function(a,b,x){
+  modified_df = subset(D_tall, ! test.trial.level %in% c(a,b,x))
+  lm.null = lme(measure~1, random=~1|ID, data=modified_df)
+  lm.alt = lme(measure~test.trial.level, random=~1|ID, data=modified_df)
+  
+  null.bic = BIC(lm.null)
+  alt.bic = BIC(lm.alt)
+  
+  # compute the BF01  - this is the BF whose value is interpreted as the evidence in favor of the null (e.g., if the BF01 = 2.6, this means that there is 2.6 times as much evidence for the null than for the alternative or the evidence is 2.6:1 in favor of the null)
+  
+  BF01 = exp((alt.bic - null.bic)/2) # this yields a BF that is interpreted as the evidence in favor of the null; it's critical that the alt.bic comes first otherwise your interpretation of the resulting BF value will be incorrect
+  BF10 = 1/BF01
+  BF10
+}
+
+# gbgr vs grgb
+bayes_factor_func(a="gbrg",b="grbg",x="Posttest")
+# 3.531591
+
+# grgb vs grbg
+bayes_factor_func(a="grgb",b="gbrg",x="Posttest")
+# 3.739883
+
+# gbrg vs grbg
+bayes_factor_func(a="gbgr",b="grgb",x="Posttest")
+# 2.487306
+
+# gbgr vs grgb
+bayes_factor_func(a="grgb",b="grbg",x="Posttest")
+#0.6499908
+
+# grbg vs grgb
+bayes_factor_func(a="gbgr",b="gbrg",x="Posttest")
+# 0.6104696
+
+# gbgr vs grbg
+bayes_factor_func(a="grgb",b="gbrg",x="Posttest")
+# 0.6104696
 
 ########################################################
 ########################################################
@@ -465,20 +506,11 @@ main_perm_func(c(1:3))
 ########################################################
 
 ## AGE AS COVARIATE ##
-# Create 'F_tall' data frame to use for ggplot
-F_tall = D_tall
-
-# rename levels of 'condition' and 'q.type.cat' factors
-F_tall$test.trial.level = revalue(x = as.factor(F_tall$test.trial.level), 
-                           c("1" = "GBGR", "2"="GRGB", "3" = "GBRG", 
-                             "4" = "GRBG",
-                             "5" = "Posttest"))
-
-F_tall$med.split.age = revalue(x = as.factor(F_tall$med.split.age), 
-                                  c("0" = "Younger (<=18.06)", "1" = "Older (>18.06)"))
+D_tall$med.split.age = revalue(x = as.factor(D_tall$med.split.age), 
+                                  c("0" = "Younger (<=19.01)", "1" = "Older (>19.01)"))
 
 # OMNIBUS ANALYSIS FIGURE
-condition_barplot = ggplot(F_tall, aes(test.trial.level, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
+condition_barplot = ggplot(D_tall, aes(test.trial.level, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
 condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
   stat_summary(fun.data=mean_cl_boot, geom = "errorbar", position = position_dodge(width=0.90), width = 0.2) + # add errors bars
   ylab("Looking time (s)") + # change the label of the y-axis
@@ -509,24 +541,19 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge",
 ##########################################################
 ## INDIVIDUAL DIFFERENCES FOR OLDER AND YOUNGER INFANTS ##
 ##########################################################
-ancova.main.age.fit = ezANOVA(D_tall, dv = measure, within=test.trial.level,
-                                   between = med.split.age,
-                                   wid = ID)
-print(ancova.main.age.fit)
+main.age.fit = lme(measure~(test.trial.level+med.split.age)^2, 
+                   random=~1|ID, na.action=na.exclude,
+                   data=D_tall)
+
+anova.lme(main.age.fit)
 
 # create separate DFs for both the younger and older infants
-U = subset(D_tall, ! test.trial.level %in% c(5))
+U = subset(D_tall, ! test.trial.level %in% c("Posttest"))
 U = U[order(U$med.split.age),]
 
-U$med.split.age = revalue(x = as.factor(U$med.split.age), 
-                               c("0" = "Younger (<=18.06)", "1" = "Older (>18.06)"))
-  
-U$test.trial.level = revalue(x = as.factor(U$test.trial.level), 
-                                  c("1" = "GBGR", "2"="GRGB", "3" = "GBRG", 
-                                    "4" = "GRBG"))
 
-younger_df = U[c(1:52),]
-older_df = U[c(53:100),]  
+younger_df = U[c(1:68),]
+older_df = U[c(69:128),]  
 
 
 # Omnibus Younger and Older Plot
@@ -538,7 +565,7 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge",
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
-  coord_cartesian(ylim=c(0, 18)) +
+  coord_cartesian(ylim=c(0, 25)) +
   theme_classic() +
   scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) + # changes colors of individual bars
   theme(legend.box.background = element_rect(), legend.box.margin = margin(3, 3, 3, 3)) + # this creates a square around legends
@@ -602,18 +629,19 @@ labs(x = "Test trials")
 # install and load post-hoc chi-square test package (called follow up binomial tests)
 
 # create contigency table with counts
-chi.younger.data = matrix(c(4,2,7),1)
+chi.younger.data = matrix(c(6,3,8),1)
 dimnames(chi.younger.data) = list(c("Younger Infant"), c("Markov", "Perceptual", "Other"))
 ## COUNTS
-# Younger: M=4, P=2,  O = 7
+# Younger: M=6, P=3,  O = 8
 
 
 # the chi data
                  Markov Perceptual Other
-Younger Infant      4          2     7
+Younger Infant      6          3     8
 
 # run chisq.test() on chi table
 chi.younger.test = chisq.test(chi.younger.data, simulate.p.value = TRUE) 
+chi.younger.test
 
 # YOUNGER INFANTS INDIVIDUAL DIFFERENCES SUMMARY
 # Younger infants did not differ in the extent to which they 
@@ -628,18 +656,19 @@ chi.younger.test = chisq.test(chi.younger.data, simulate.p.value = TRUE)
 # install and load post-hoc chi-square test package (called follow up binomial tests)
 
 # create contigency table with counts
-chi.older.data = matrix(c(4,3,5),1)
+chi.older.data = matrix(c(3,4,8),1)
 dimnames(chi.older.data) = list(c("Younger Infant"), c("Markov", "Perceptual", "Other"))
 ## COUNTS
-# Older: M=4, P=3,  O = 5
+# Older: M=3, P=4,  O = 8
 
 
 # the chi data
                 Markov Perceptual Other
-Older Infant      4          3     5
+Older Infant      3          4     8
 
 # run chisq.test() on chi table
 chi.older.test = chisq.test(chi.older.data, simulate.p.value = TRUE) 
+chi.older.test
 
 # OLDER INFANTS INDIVIDUAL DIFFERENCES SUMMARY
 # Older infants, like younger infants, did not differ in the extent to which they 
@@ -653,32 +682,108 @@ chi.older.test = chisq.test(chi.older.data, simulate.p.value = TRUE)
 ##########################################################
 ## INDIVIDUAL DIFFERENCES FOR FAST AND SLOW HABITUATORS ##
 ##########################################################
-ancova.main.hab.rate.fit = ezANOVA(D_tall, dv = measure, within=test.trial.level,
-                                   between = med.split.num.hab,
-                                   wid = ID)
-print(ancova.main.hab.rate.fit)
+main.hab.rate.fit = lme(measure~(test.trial.level+med.split.num.hab)^2, 
+                   random=~1|ID, na.action=na.exclude,
+                   data=D_tall)
+
+anova.lme(main.hab.rate.fit)
+
 
 
 # create separate DFs for both the younger and older infants
-G = subset(D_tall, ! test.trial.level %in% c(5))
+G = subset(D_tall, ! test.trial.level %in% c("Posttest"))
 G = G[order(G$med.split.num.hab),]
 
-G$med.split.age = revalue(x = as.factor(G$med.split.age), 
-                          c("0" = "Younger (<=18.06)", "1" = "Older (>18.06)"))
 
-G$test.trial.level = revalue(x = as.factor(G$test.trial.level), 
-                             c("1" = "GBGR", "2"="GRGB", "3" = "GBRG", 
-                               "4" = "GRBG"))
+fast_hab_df = G[c(1:60),]
+slow_hab_df = G[c(61:128),] 
 
-G$med.split.num.hab = revalue(x = as.factor(G$med.split.num.hab), 
-                              c("0" = "Fast Habituators (<=5)", "1" = "Slow Habituators (>5)"))
+# HABITUATION RATE PERMUTATION FUNCTION
+hab_rate_perm_func = function(a,z,n){
+  b = rep(0,5000) 
+  for(i in 1:length(b)){
+    x = factor(G$test.trial.level, levels=c(a,z))
+    y = sample(G$measure, replace=TRUE) 
+    lm_1 = lm(y[G$med.split.num.hab==n] ~ x[G$med.split.num.hab==n], data=G)
+    b[i] = coef(lm_1)[2]
+  }
+  bb_dif = mean(G$measure[G$test.trial.level==a & G$med.split.num.hab==n], na.rm=TRUE)-
+    mean(G$measure[G$test.trial.level==z & G$med.split.num.hab==n], na.rm=TRUE)
+  c((sum(abs(b) > bb_dif)/length(b)),(sum(b > bb_dif)/length(b)),
+    sum((abs(b) < bb_dif)/length(b)),(sum(b < bb_dif)/length(b)),
+    mean(G$measure[G$test.trial.level==a & G$med.split.num.hab==n], na.rm=TRUE),
+    mean(G$measure[G$test.trial.level==z & G$med.split.num.hab==n], na.rm=TRUE),
+    bb_dif)
+}
 
-fast_hab_df = G[c(1:52),]
-slow_hab_df = G[c(53:100),] 
+
+# Fast Habituators Planned Comparisons
+# gbgr v grgb
+hab_rate_perm_func("gbgr","grgb", "Fast Habituators")
+# gbgr v gbrg
+hab_rate_perm_func("gbgr","gbrg", "Fast Habituators")
+# gbgr v grbg
+hab_rate_perm_func("gbgr","grbg", "Fast Habituators")
+# grgb v gbrg
+hab_rate_perm_func("grgb","gbrg", "Fast Habituators")
+# grgb v grbg
+hab_rate_perm_func("grgb","grbg", "Fast Habituators")
+# gbrg v grbg
+hab_rate_perm_func("gbrg","grbg", "Fast Habituators")
+
+
+# Slow Habituators Planned Comparisons
+# gbgr v grgb
+hab_rate_perm_func("gbgr","grgb", "Slow Habituators")
+# gbgr v gbrg
+hab_rate_perm_func("gbgr","gbrg", "Slow Habituators")
+# gbgr v grbg
+hab_rate_perm_func("gbgr","grbg", "Slow Habituators")
+# grgb v gbrg
+hab_rate_perm_func("grgb","gbrg", "Slow Habituators")
+# grgb v grbg
+hab_rate_perm_func("grgb","grbg", "Slow Habituators")
+# gbrg v grbg
+hab_rate_perm_func("gbrg","grbg", "Slow Habituators")
 
 
 
- 
+# Fast and Slow Habituators Bootstrapped Means
+hab_boot_mean_func = function(x){
+  hab_boot_mean = as.data.frame(matrix(NA, nrow=4, ncol=3, byrow=TRUE))
+  for(i in 1:nrow(hab_boot_mean)){ # want number of iterations to equal number of rows, especially because we're filling in by row
+    set.seed(2018)
+    boot_func = function(data,b,formula, p){ 
+      d= data[b,] 
+      x = d$measure[d$test.trial.level==i & d$med.split.num.hab==x]
+      dif.1 =  mean(x, data=D_tall_2, na.rm=TRUE) 
+      return(dif.1)
+    }
+    
+    boot_main = boot(D_tall_2, boot_func, R=5000) 
+    hab_boot_mean[i,] = c(boot_main$t0, boot_main$t0  + 1.96*-sd(boot_main$t), 
+                          boot_main$t0  + 1.96*sd(boot_main$t))
+  }
+  hab_boot_mean
+}
+
+
+# SLOW HABITUATORS BOOTSTRAPPED CIs
+hab_boot_mean_func(1)
+V1       V2        V3
+1 13.794118 8.425743 19.162492
+2  5.964706 2.972546  8.956866
+3 10.811765 6.052085 15.571444
+4  4.523529 2.593708  6.453350
+
+# FAST HABITUATORS BOOTSTRAPPED CIs
+hab_boot_mean_func(0)
+V1       V2       V3
+1 7.546667 4.339970 10.75336
+2 8.420000 5.032977 11.80702
+3 9.246667 4.741503 13.75183
+4 9.326667 3.841989 14.81134
+
 # OMNIBUS HABITUATORS GRAPH
 condition_barplot = ggplot(G, aes(med.split.num.hab, measure, fill = test.trial.level)) # create the bar graph with test.trial.2 on the x-axis and measure on the y-axis
 condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge", colour = "black") + # add the bars, which represent the means and the place them side-by-side with 'dodge'
@@ -689,7 +794,7 @@ condition_barplot + stat_summary(fun.y = mean, geom = "bar", position = "dodge",
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + # remove the major and minor grids
   scale_y_continuous(expand = c(0, 0)) + # ensure that bars hit the x-axis
-  coord_cartesian(ylim=c(0, 18)) +
+  coord_cartesian(ylim=c(0, 25)) +
   theme_classic() +
   scale_fill_manual(values = c("white", "gray81", "gray38", "gray20", "black")) + # changes colors of individual bars
   theme(legend.box.background = element_rect(), legend.box.margin = margin(3, 3, 3, 3)) + # this creates a square around legends
@@ -750,18 +855,24 @@ labs(x = "Test trials")
 # install and load post-hoc chi-square test package (called follow up binomial tests)
 
 # create contigency table with counts
-chi.slow.data = matrix(c(4,2,6),1)
+chi.slow.data = matrix(c(4,2,11),1)
 dimnames(chi.slow.data) = list(c("Slow Habituators"), c("Markov", "Perceptual", "Other"))
 ## COUNTS
-# Older: M=4, P=2,  O = 6
+# Older: M=4, P=2,  O = 11
 
 
 # the chi data
                     Markov Perceptual Other
-Slow Habituators      4          2     6
+Slow Habituators      4          2     11
 
 # run chisq.test() on chi table
-chi.slow.test = chisq.test(chi.slow.data, simulate.p.value = TRUE) 
+chi.slow.test = chisq.test(chi.slow.data, simulate.p.value = TRUE)
+
+
+# Follow-up binomial tests
+binom.test(4,15,p=1/2) # Markov v Other
+binom.test(2,13,p=1/2) # Perceptual v other
+binom.test(4,6,p=1/2) # Markov v Perceptual
 
 # SLOW HABITUATORS INDIVIDUAL DIFFERENCES SUMMARY
 # Older infants, like younger infants, did not differ in the extent to which they 
@@ -776,7 +887,7 @@ chi.slow.test = chisq.test(chi.slow.data, simulate.p.value = TRUE)
 # install and load post-hoc chi-square test package (called follow up binomial tests)
 
 # create contigency table with counts
-chi.fast.data = matrix(c(5,2,6),1)
+chi.fast.data = matrix(c(3,3,9),1)
 dimnames(chi.fast.data) = list(c("Fast Habituators"), c("Markov", "Perceptual", "Other"))
 ## COUNTS
 # Older: M=5, P=2,  O = 6
@@ -784,10 +895,17 @@ dimnames(chi.fast.data) = list(c("Fast Habituators"), c("Markov", "Perceptual", 
 
 # the chi data
 Markov Perceptual Other
-Fast Habituators      5          2     6
+Fast Habituators      3          3     9
 
 # run chisq.test() on chi table
 chi.fast.test = chisq.test(chi.fast.data, simulate.p.value = TRUE) 
+chi.fast.test
+
+
+# Follow-up binomial tests
+binom.test(3,12,p=1/2) # Markov v Other
+binom.test(3,12,p=1/2) # Perceptual v other
+binom.test(3,6,p=1/2) # Markov v Perceptual
 
 # FAST HABITUATORS INDIVIDUAL DIFFERENCES SUMMARY
 # Older infants, like younger infants, did not differ in the extent to which they 
